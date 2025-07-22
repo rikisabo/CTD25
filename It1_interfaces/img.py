@@ -85,10 +85,22 @@ class Img:
         cv2.putText(self.img, txt, (x, y),
                     cv2.FONT_HERSHEY_SIMPLEX, font_size,
                     color, thickness, cv2.LINE_AA)
-
+        
+    def clone(self) -> Img:
+        """Return a copy of the image."""
+        new_img = Img()
+        new_img.img = self.img.copy() if self.img is not None else None
+        return new_img
+    
     def show(self):
         if self.img is None:
             raise ValueError("Image not loaded.")
         cv2.imshow("Image", self.img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+    def copy(self) -> Img:
+        """Return a copy of the image."""
+        new_img = Img()
+        new_img.img = self.img.copy() if self.img is not None else None
+        return new_img
