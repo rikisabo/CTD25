@@ -159,9 +159,34 @@ class Game:
         return cv2.getWindowProperty("Game", cv2.WND_PROP_VISIBLE) > 0
 
     # ─── capture resolution ────────────────────────────────────────────────
-    def _resolve_collisions(self):
-        """Resolve piece collisions and captures (not implemented)."""
-        pass
+    def _resolve_collisions(self, just_moved_piece=None):
+        """בדוק האם יש שני כלים באותה משבצת, והכרע מי אוכל את מי."""
+        positions = {}
+        to_remove = []
+        for p in self.pieces.values():
+            pos = tuple(p.position)
+            if pos in positions:
+                other = positions[pos]
+                # אם יש כלי שהרגע זז למשבצת הזו – הוא אוכל את העומד
+                if just_moved_piece and p.piece_id == just_moved_piece.piece_id:
+                    print(f"{p.piece_id} eats {other.piece_id}")
+                    to_remove.append(other.piece_id)
+                elif just_moved_piece and other.piece_id == just_moved_piece.piece_id:
+                    print(f"{other.piece_id} eats {p.piece_id}")
+                    to_remove.append(p.piece_id)
+                # אם שניהם זזו – מי שlast_action_time קטן יותר אוכל
+                elif p.last_action_time < other.last_action_time:
+                    print(f"{p.piece_id} eats {other.piece_id}")
+                    to_remove.append(other.piece_id)
+                else:
+                    print(f"{other.piece_id} eats {p.piece_id}")
+                    to_remove.append(p.piece_id)
+            else:
+                positions[pos] = p
+        # מחק אחרי הלולאה!
+        for pid in to_remove:
+            if pid in self.pieces:
+                del self.pieces[pid]
 
     # ─── board validation & win detection ───────────────────────────────────
     def _is_win(self) -> bool:
@@ -180,8 +205,6 @@ class Game:
         return None
 
     def _try_move(self, piece, target_pos):
-        print(f"Moving {piece.piece_id} from {piece.position} to {target_pos}")
         piece.position = tuple(target_pos)
-        print("All pieces after move:")
-        for p in self.pieces.values():
-            print(f"{p.piece_id}: {p.position}")
+        piece.last_action_time = time.time()
+        self._resolve_collisions(just_moved_piece=piece)

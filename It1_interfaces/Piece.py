@@ -8,7 +8,8 @@ class Piece:
         self.piece_id = piece_id
         self._state = init_state
         self.position = self._state._physics.cell
-        self.player = player  # ← הוספה תקינה
+        self.player = player
+        self.last_action_time = 0  # ← חדש
 
     def on_command(self, cmd: Command, now_ms: int):
         """Handle a command for this piece."""
