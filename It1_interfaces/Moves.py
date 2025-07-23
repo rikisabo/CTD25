@@ -12,8 +12,8 @@ class Moves:
         if not self.moves:
             raise ValueError(f"No valid moves found in {txt_path}")
 
-    def load_moves(self) -> List[Tuple[int, int]]:
-        """Load moves from a text file."""
+    def load_moves(self) -> List[str]:
+        """Load moves from a text file as raw lines."""
         moves = []
         with open(self.txt_path, 'r') as f:
             for line in f:
@@ -21,19 +21,25 @@ class Moves:
                 if not line or line.startswith("//"):
                     continue
                 line = line.split("//")[0].strip()
-                parts = line.split(',')
-                if len(parts) == 2:
-                    try:
-                        r = int(parts[0].split(":")[0])
-                        c = int(parts[1].split(":")[0])
-                        moves.append((r, c))
-                    except Exception as e:
-                        print(f"Skipped line (parse error): {line} ({e})")
+                moves.append(line)
         return moves
 
-    def get_moves(self, r: int, c: int) -> List[Tuple[int, int]]:
-        """Get all possible moves from a given position."""
-        self.moves = self.load_moves()
-        if not self.moves: 
-            return []
-        return self.moves
+    def get_moves(self, row, col, has_moved=False, capture=False):
+        moves = []
+        for line in self.moves:
+            dx, dy, move_type = parse_line(line)
+            if move_type == "1st" and has_moved:
+                continue
+            if move_type == "capture" and not capture:
+                continue
+            moves.append((row + dx, col + dy))
+        return moves
+
+def parse_line(line):
+    # דוגמה: "1,0:non_capture"
+    parts = line.split(":")
+    coords = parts[0].split(",")
+    dx = int(coords[0])
+    dy = int(coords[1])
+    move_type = parts[1] if len(parts) > 1 else "non_capture"
+    return dx, dy, move_type

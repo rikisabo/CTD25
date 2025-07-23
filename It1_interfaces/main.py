@@ -6,6 +6,7 @@ from It1_interfaces.img import Img
 from It1_interfaces.Board import Board
 from It1_interfaces.PieceFactory import PieceFactory
 from It1_interfaces.Game import Game
+from It1_interfaces.InputHandler import InputHandler
 import pathlib
 
 def main():
@@ -23,16 +24,19 @@ def main():
     pieces_root = pathlib.Path("../pieces")
     factory = PieceFactory(board, pieces_root)
 
-    print("Trying to open:", r'c:\Users\1\Documents\bootkamp\CTD25\pieces\board.csv')
+    #print("Trying to open:", r'c:\Users\1\Documents\bootkamp\CTD25\pieces\board.csv')
     initial_pieces = board.read_board_csv(r'c:\Users\1\Documents\bootkamp\CTD25\pieces\board.csv')
-    print("initial",initial_pieces)
+    #print("initial",initial_pieces)
     pieces = []
+    pieces_dict = {}  # Add this line
     for p_type, cell in initial_pieces:
         piece = factory.create_piece(p_type, cell)
-        print(piece.piece_id, cell)  # ← בדוק שכל חייל נוצר
+        #print(piece.piece_id, cell)  # ← בדוק שכל חייל נוצר
         pieces.append(piece)
-    print("Total pieces:", len(pieces))  # ← צריך להיות 32
+        pieces_dict[piece.piece_id] = piece  # Add this line
+    #print("Total pieces:", len(pieces))  # ← צריך להיות 32
     game = Game(pieces, board)
+    input_handler = InputHandler(board, pieces_dict)  # pieces_dict = {piece_id: piece, ...}
     game.run()
 
 if __name__ == "__main__":

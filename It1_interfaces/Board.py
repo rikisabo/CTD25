@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import csv
 from It1_interfaces.img import Img
-
+#esterBenYehuda
 @dataclass
 class Board:
     cell_H_pix: int
@@ -9,8 +9,8 @@ class Board:
     W_cells: int
     H_cells: int
     img: Img
-    #self.canvas: Img ()
-    # convenience, not required by dataclass
+    
+    
     def clone(self) -> "Board":
         """Clone the board with a copy of the image."""
         return Board(
@@ -31,12 +31,10 @@ class Board:
     @staticmethod
     #initial in the starting position
     def read_board_csv(path):
-        print("Reading board from:", path)
         pieces = []
         with open(path, newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
             for i, row in enumerate(reader):
-                print("row", i, row)
                 for j, cell in enumerate(row):
                     if cell.strip():
                         pieces.append((cell.strip(), (i, j)))

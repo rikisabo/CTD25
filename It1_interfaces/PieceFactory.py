@@ -26,18 +26,18 @@ class PieceFactory:
 
     #PieceFactory.py  – replace create_piece(...)
     def create_piece(self, p_type: str, cell: Tuple[int, int]) -> Piece:
-        """Create a piece of the specified type at the given cell."""
         folder = self.pieces_root / p_type
-        
         if not folder.exists():
             raise ValueError(f"Piece type '{p_type}' does not exist in {self.pieces_root}")
-        
         if not folder.is_dir():
             raise ValueError(f"Expected a directory for piece type '{p_type}' at {folder}")
-        # Load moves and graphics for the piece
-        
-        moves = Moves(folder / "moves.txt", [self.board.H_cells, self.board.W_cells])
+
+        moves_path = folder / "moves.txt"
+        print(f"Trying to load moves from: {moves_path}")
+        moves = Moves(moves_path, [self.board.H_cells, self.board.W_cells])
         moves.get_moves(cell[0], cell[1])
+        print(f"Loaded moves for {p_type} from {moves_path}")
+
         states={}
         states_folder=folder/"states"
 
@@ -58,9 +58,13 @@ class PieceFactory:
         states["long_rest"].set_transition("idle", states["idle"])
         states["short_rest"].set_transition("idle", states["idle"])
 
+        # קביעת שחקן לפי סוג הכלי (B=אדום/A, W=לבן/B)
+        player = "A" if p_type.endswith("B") else "B"
         piece_id = f"{p_type}_{cell[0]}_{cell[1]}"
 
+        print(f"Created piece: {piece_id}, player: {player}, cell: {cell}")
         return Piece(
             piece_id=piece_id,
-            init_state=states["idle"]
+            init_state=states["idle"],
+            player=player
         )
