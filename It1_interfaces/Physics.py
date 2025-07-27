@@ -82,12 +82,11 @@ class Physics:
 class IdlePhysics(Physics):
     def update(self, now_ms: int) -> Command:
         self.last_update = now_ms
-        return self.cmd or Command("idle")
+        return Command(now_ms, "default_piece", "idle", [])
 
 class MovePhysics(Physics):
     def update(self, now_ms: int) -> Command:
-        # כאן תוכל לממש מעבר תא בהתאם לזמן ומהירות
         self.last_update = now_ms
         # סימולציה בסיסית להשלמת מעבר
         self.finished = True
-        return self.cmd or Command("default_piece", "move", {})
+        return Command(now_ms, "default_piece", "move", {})

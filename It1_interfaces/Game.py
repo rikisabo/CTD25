@@ -6,14 +6,15 @@ import threading
 import time
 import math
 import os
+import numpy as np
 from typing import List, Dict, Tuple, Optional
 from Board import Board
-# from Bus.bus import EventBus, Event
 from Command import Command
 from Piece import Piece
 from It1_interfaces.img import Img
 from It1_interfaces.InputHandler import InputHandler
 from Moves import Moves
+from bus import publish
 
 # Exception for invalid board state
 # class InvalidBoard(Exception):
@@ -21,7 +22,7 @@ from Moves import Moves
 
 # ────────────────────────────────────────────────────────────────────
 class Game:
-    def __init__(self, pieces: List[Piece], board: Board):
+    def __init__(self, pieces: List[Piece], board: Board,scoreboard=None, movelog=None):
         """Initialize the game with pieces, board, and optional event bus."""
         self.pieces = {p.piece_id: p for p in pieces}
         self.board = board
@@ -31,7 +32,16 @@ class Game:
         self.select_stage_a = 0  # 0=select piece, 1=select target
         self.select_stage_b = 0
         self.user_input_queue = queue.Queue()
-        #self.moves = Moves(pathlib.Path("moves.txt"), (board.H_cells, board.W_cells))
+        self.scoreboard = scoreboard if scoreboard else None  # Optional scoreboard
+        self.movelog    = movelog
+
+        # Load background image once
+        self.background_img = cv2.imread("../background.png")
+        if self.background_img is None:
+            print("Warning: background image not found, using white background")
+            self.background_img = 255 * np.ones((1080, 1920, 3), dtype=np.uint8)
+        else:
+            self.background_img = cv2.resize(self.background_img, (1920, 1080))
 
     # ─── helpers ─────────────────────────────────────────────────────────────
     def game_time_ms(self) -> int:
@@ -43,6 +53,7 @@ class Game:
         Return a brand-new Board wrapping a copy of the background pixels
         so we can paint sprites without touching the pristine board.
         """
+        # Implement if needed
         pass
 
     def start_user_input_thread(self):
@@ -73,12 +84,35 @@ class Game:
 
     # ─── drawing helpers ────────────────────────────────────────────────────
     def _draw(self):
-        """Draw the current game state."""
+        background = self.background_img.copy()
+
         img = self.board.img.img.copy()
+        img = cv2.copyMakeBorder(img,
+                                 top=0, bottom=0, left=0, right=220,
+                                 borderType=cv2.BORDER_CONSTANT,
+                                 value=(40, 40, 40))
         for p in self.pieces.values():
             p.draw_on_board_to_img(img, self.board, now_ms=0)
         self.input_handler.draw_focus(img)
-        cv2.imshow("Game", img)
+
+        if img.shape[2] == 4:
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
+        h, w = img.shape[:2]
+        H, W = background.shape[:2]
+
+        # הרבה שמאלה (x קטן), ולמעלה (y קטן)
+        x = 40    # אפשר גם 0 או ערך שלילי אם צריך עוד יותר שמאלה
+        y = 30    # קרוב לחלק העליון
+
+        background[y:y+h, x:x+w] = img
+
+        if self.scoreboard:
+            self.scoreboard.draw(background, origin=(x + w + 10, y + 30))
+        if self.movelog:
+            self.movelog.draw(background, origin=(x + w + 10, y + 90))
+
+        cv2.imshow("Game", background)
 
     # ─── input processing ───────────────────────────────────────────────────
     def _process_input(self, cmd: Command):
@@ -170,20 +204,24 @@ class Game:
                 # אם יש כלי שהרגע זז למשבצת הזו – הוא אוכל את העומד
                 if just_moved_piece and p.piece_id == just_moved_piece.piece_id:
                     print(f"{p.piece_id} eats {other.piece_id}")
+                    publish("piece_captured", {"victim": other})
                     to_remove.append(other.piece_id)
                 elif just_moved_piece and other.piece_id == just_moved_piece.piece_id:
                     print(f"{other.piece_id} eats {p.piece_id}")
+                    publish("piece_captured", {"victim": p})
                     to_remove.append(p.piece_id)
                 # אם שניהם זזו – מי שlast_action_time קטן יותר אוכל
                 elif p.last_action_time < other.last_action_time:
                     print(f"{p.piece_id} eats {other.piece_id}")
+                    publish("piece_captured", {"victim": other})
                     to_remove.append(other.piece_id)
                 else:
                     print(f"{other.piece_id} eats {p.piece_id}")
+                    publish("piece_captured", {"victim": p})
                     to_remove.append(p.piece_id)
             else:
                 positions[pos] = p
-        # מחק אחרי הלולאה!
+       
         for pid in to_remove:
             if pid in self.pieces:
                 del self.pieces[pid]
@@ -207,4 +245,7 @@ class Game:
     def _try_move(self, piece, target_pos):
         piece.position = tuple(target_pos)
         piece.last_action_time = time.time()
+        publish("piece_moved", {"piece": piece,      
+                                "to":   tuple(target_pos)})
+
         self._resolve_collisions(just_moved_piece=piece)
